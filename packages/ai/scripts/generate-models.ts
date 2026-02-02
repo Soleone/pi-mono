@@ -194,7 +194,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 				}
 
 				if (id.startsWith("amazon.titan-text-express") ||
-				    id.startsWith("mistral.mistral-7b-instruct-v0")) {
+					id.startsWith("mistral.mistral-7b-instruct-v0")) {
 					// These models doesn't support system messages
 					continue;
 				}
@@ -206,27 +206,27 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 
 				// Models with global cross-region inference profiles
 				if (id.startsWith("anthropic.claude-haiku-4-5") ||
-						id.startsWith("anthropic.claude-sonnet-4") ||
-						id.startsWith("anthropic.claude-opus-4-5") ||
-						id.startsWith("amazon.nova-2-lite") ||
-						id.startsWith("cohere.embed-v4") ||
-						id.startsWith("twelvelabs.pegasus-1-2")) {
-						id = "global." + id;
+					id.startsWith("anthropic.claude-sonnet-4") ||
+					id.startsWith("anthropic.claude-opus-4-5") ||
+					id.startsWith("amazon.nova-2-lite") ||
+					id.startsWith("cohere.embed-v4") ||
+					id.startsWith("twelvelabs.pegasus-1-2")) {
+					id = "global." + id;
 				}
 
 				// Models with US cross-region inference profiles
 				if (id.startsWith("amazon.nova-lite") ||
-						id.startsWith("amazon.nova-micro") ||
-						id.startsWith("amazon.nova-premier") ||
-						id.startsWith("amazon.nova-pro") ||
-						id.startsWith("anthropic.claude-3-7-sonnet") ||
-						id.startsWith("anthropic.claude-opus-4-1") ||
-						id.startsWith("anthropic.claude-opus-4-20250514") ||
-						id.startsWith("deepseek.r1") ||
-						id.startsWith("meta.llama3-2") ||
-						id.startsWith("meta.llama3-3") ||
-						id.startsWith("meta.llama4")) {
-						id = "us." + id;
+					id.startsWith("amazon.nova-micro") ||
+					id.startsWith("amazon.nova-premier") ||
+					id.startsWith("amazon.nova-pro") ||
+					id.startsWith("anthropic.claude-3-7-sonnet") ||
+					id.startsWith("anthropic.claude-opus-4-1") ||
+					id.startsWith("anthropic.claude-opus-4-20250514") ||
+					id.startsWith("deepseek.r1") ||
+					id.startsWith("meta.llama3-2") ||
+					id.startsWith("meta.llama3-3") ||
+					id.startsWith("meta.llama4")) {
+					id = "us." + id;
 				}
 
 				const bedrockModel = {
@@ -250,8 +250,8 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 
 				// Add EU cross-region inference variants for Claude models
 				if (modelId.startsWith("anthropic.claude-haiku-4-5") ||
-						modelId.startsWith("anthropic.claude-sonnet-4-5") ||
-						modelId.startsWith("anthropic.claude-opus-4-5")) {
+					modelId.startsWith("anthropic.claude-sonnet-4-5") ||
+					modelId.startsWith("anthropic.claude-opus-4-5")) {
 					models.push({
 						...bedrockModel,
 						id: "eu." + modelId,
@@ -425,25 +425,25 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 				const supportsImage = m.modalities?.input?.includes("image")
 
 				models.push({
-				id: modelId,
-				name: m.name || modelId,
-				api: "openai-completions",
-				provider: "zai",
-				baseUrl: "https://api.z.ai/api/coding/paas/v4",
-				reasoning: m.reasoning === true,
-				input: supportsImage ? ["text", "image"] : ["text"],
-				cost: {
-					input: m.cost?.input || 0,
-					output: m.cost?.output || 0,
-					cacheRead: m.cost?.cache_read || 0,
-					cacheWrite: m.cost?.cache_write || 0,
-				},
-				compat: {
-					supportsDeveloperRole: false,
-					thinkingFormat: "zai",
-				},
-				contextWindow: m.limit?.context || 4096,
-				maxTokens: m.limit?.output || 4096,
+					id: modelId,
+					name: m.name || modelId,
+					api: "openai-completions",
+					provider: "zai",
+					baseUrl: "https://api.z.ai/api/coding/paas/v4",
+					reasoning: m.reasoning === true,
+					input: supportsImage ? ["text", "image"] : ["text"],
+					cost: {
+						input: m.cost?.input || 0,
+						output: m.cost?.output || 0,
+						cacheRead: m.cost?.cache_read || 0,
+						cacheWrite: m.cost?.cache_write || 0,
+					},
+					compat: {
+						supportsDeveloperRole: false,
+						thinkingFormat: "zai",
+					},
+					contextWindow: m.limit?.context || 4096,
+					maxTokens: m.limit?.output || 4096,
 				});
 			}
 		}
@@ -657,6 +657,32 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 			}
 		}
 
+		// Process Venice models
+		if (data.venice?.models) {
+			for (const [modelId, model] of Object.entries(data.venice.models)) {
+				const m = model as ModelsDevModel;
+				if (m.tool_call !== true) continue;
+
+				models.push({
+					id: modelId,
+					name: m.name || modelId,
+					api: "openai-completions",
+					provider: "venice",
+					baseUrl: "https://api.venice.ai/api/v1",
+					reasoning: m.reasoning === true,
+					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					cost: {
+						input: m.cost?.input || 0,
+						output: m.cost?.output || 0,
+						cacheRead: m.cost?.cache_read || 0,
+						cacheWrite: m.cost?.cache_write || 0,
+					},
+					contextWindow: m.limit?.context || 4096,
+					maxTokens: m.limit?.output || 4096,
+				});
+			}
+		}
+
 		console.log(`Loaded ${models.length} tool-capable models from models.dev`);
 		return models;
 	} catch (error) {
@@ -667,7 +693,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 
 async function generateModels() {
 	// Fetch models from both sources
-	// models.dev: Anthropic, Google, OpenAI, Groq, Cerebras
+	// models.dev: Anthropic, Google, OpenAI, Groq, Cerebras, Venice, etc.
 	// OpenRouter: xAI and other providers (excluding Anthropic, Google, OpenAI)
 	// AI Gateway: OpenAI-compatible catalog with tool-capable models
 	const modelsDevModels = await loadModelsDevData();
@@ -850,10 +876,10 @@ async function generateModels() {
 			cost: {
 				// we dont know about the costs because OpenRouter auto routes to different models
 				// and then charges you for the underlying used model
-				input:0,
-				output:0,
-				cacheRead:0,
-				cacheWrite:0,
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
 			},
 			contextWindow: 2000000,
 			maxTokens: 30000,

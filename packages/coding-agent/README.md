@@ -96,6 +96,7 @@ For each built-in provider, pi maintains a list of tool-capable models, updated 
 - Hugging Face
 - Kimi For Coding
 - MiniMax
+- Venice
 
 See [docs/providers.md](docs/providers.md) for detailed setup instructions.
 

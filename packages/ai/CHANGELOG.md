@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added Venice.ai provider support
+
 ## [0.51.0] - 2026-02-01
 
 ### Fixed

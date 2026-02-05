@@ -767,6 +767,40 @@ export default function(api) { api.registerTool({ name: "test", description: "te
 			expect(result.extensions.some((r) => r.path.endsWith("utils.ts"))).toBe(false);
 		});
 
+		it("should respect package.json pi.extensions manifest in directly specified directory", async () => {
+			// This tests the case where a directory with package.json is specified directly
+			// in settings.json extensions array (not as a subdirectory of an extensions folder)
+			const extDir = join(tempDir, "direct-manifest-ext");
+			mkdirSync(extDir, { recursive: true });
+
+			// Directory with its own manifest
+			writeFileSync(
+				join(extDir, "package.json"),
+				JSON.stringify({
+					pi: {
+						extensions: ["./index.ts"],
+					},
+				}),
+			);
+			writeFileSync(join(extDir, "index.ts"), "export default function(api) {}");
+			writeFileSync(join(extDir, "helper.ts"), "export const helper = 1;");
+			writeFileSync(join(extDir, "utils.ts"), "export const util = 1;");
+
+			// Use settings.json path to trigger the collectAutoExtensionEntries code path
+			settingsManager.setExtensionPaths([extDir]);
+			const result = await packageManager.resolve();
+
+			// Should find only index.ts declared in manifest
+			expect(result.extensions.some((r) => r.path.endsWith("index.ts") && r.enabled)).toBe(true);
+
+			// Should NOT find helper.ts or utils.ts (not declared in manifest)
+			expect(result.extensions.some((r) => r.path.endsWith("helper.ts"))).toBe(false);
+			expect(result.extensions.some((r) => r.path.endsWith("utils.ts"))).toBe(false);
+
+			// Total should be exactly 1
+			expect(result.extensions.filter((r) => r.enabled).length).toBe(1);
+		});
+
 		it("should handle mixed top-level files and subdirectories", async () => {
 			const pkgDir = join(tempDir, "mixed-pkg");
 			mkdirSync(join(pkgDir, "extensions", "complex"), { recursive: true });

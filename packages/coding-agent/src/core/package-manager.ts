@@ -411,6 +411,12 @@ function collectAutoExtensionEntries(dir: string): string[] {
 	const entries: string[] = [];
 	if (!existsSync(dir)) return entries;
 
+	// Check if directory itself has a package.json with pi.extensions
+	const manifestEntries = resolveExtensionEntries(dir);
+	if (manifestEntries) {
+		return manifestEntries;
+	}
+
 	const ig = ignore();
 	addIgnoreRules(ig, dir, dir);
 

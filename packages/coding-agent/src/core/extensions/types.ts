@@ -765,6 +765,8 @@ export type ExtensionEvent =
 
 export interface ContextEventResult {
 	messages?: AgentMessage[];
+	/** Inject a display message into the chat before the next assistant response in this turn. */
+	message?: Pick<CustomMessage, "customType" | "content" | "display" | "details">;
 }
 
 export interface ToolCallEventResult {

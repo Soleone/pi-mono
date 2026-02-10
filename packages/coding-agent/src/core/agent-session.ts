@@ -330,6 +330,24 @@ export class AgentSession {
 		// Emit to extensions first
 		await this._emitExtensionEvent(event);
 
+		// Inject pending context messages before the assistant response starts rendering
+		if (event.type === "message_start" && event.message.role === "assistant" && this._extensionRunner) {
+			const injected = this._extensionRunner.consumePendingContextMessages();
+			for (const msg of injected) {
+				const customMessage: CustomMessage = {
+					role: "custom",
+					customType: msg.customType,
+					content: msg.content,
+					display: msg.display,
+					details: msg.details,
+					timestamp: Date.now(),
+				};
+				this._emit({ type: "message_start", message: customMessage });
+				this._emit({ type: "message_end", message: customMessage });
+				this.sessionManager.appendCustomMessageEntry(msg.customType, msg.content, msg.display, msg.details);
+			}
+		}
+
 		// Notify all listeners
 		this._emit(event);
 

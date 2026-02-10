@@ -216,6 +216,7 @@ export class ExtensionRunner {
 	private shutdownHandler: ShutdownHandler = () => {};
 	private shortcutDiagnostics: ResourceDiagnostic[] = [];
 	private commandDiagnostics: ResourceDiagnostic[] = [];
+	private _pendingContextMessages: NonNullable<ContextEventResult["message"]>[] = [];
 
 	constructor(
 		extensions: Extension[],
@@ -658,6 +659,7 @@ export class ExtensionRunner {
 	async emitContext(messages: AgentMessage[]): Promise<AgentMessage[]> {
 		const ctx = this.createContext();
 		let currentMessages = structuredClone(messages);
+		this._pendingContextMessages = [];
 
 		for (const ext of this.extensions) {
 			const handlers = ext.handlers.get("context");
@@ -668,8 +670,14 @@ export class ExtensionRunner {
 					const event: ContextEvent = { type: "context", messages: currentMessages };
 					const handlerResult = await handler(event, ctx);
 
-					if (handlerResult && (handlerResult as ContextEventResult).messages) {
-						currentMessages = (handlerResult as ContextEventResult).messages!;
+					if (handlerResult) {
+						const result = handlerResult as ContextEventResult;
+						if (result.messages) {
+							currentMessages = result.messages;
+						}
+						if (result.message) {
+							this._pendingContextMessages.push(result.message);
+						}
 					}
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
@@ -685,6 +693,13 @@ export class ExtensionRunner {
 		}
 
 		return currentMessages;
+	}
+
+	/** Drain and return any display messages injected by context event handlers. */
+	consumePendingContextMessages(): NonNullable<ContextEventResult["message"]>[] {
+		const messages = this._pendingContextMessages;
+		this._pendingContextMessages = [];
+		return messages;
 	}
 
 	async emitBeforeAgentStart(
